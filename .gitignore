@@ -1,0 +1,6 @@
+db.conf
+seckey
+__pycache__
+.vscode
+uistate.conf
+work

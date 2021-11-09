@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container my-1 mx-1 border rounded w-100" style="height: 98vh; width: 98hw;">
+
+    <div class="d-flex">
+
+        <div class="p-2" style="width: 220px; min-width: 220px;">
+
+            <div class="container mx-1 mt-2 w-100">
+
+                <button type="button" class="btn btn-primary d-block m-1 w-100" onclick="startstop()" id="binit">Iniciar Leituras</button>
+
+                <button type="button" class="btn btn-primary d-block m-1 w-100" onclick="cleanup()" id="blimpar">Limpar Leituras</button>
+
+                <button type="button" class="btn btn-primary d-block m-1 w-100" onclick="saveData()" id="bsalvar">Salvar Leituras</button>
+
+                <div class="d-flex mt-4">
+                    <div class="mx-2">Tempo:</div>                    
+                    <span class="border rounded text-center flex-fill me-2" id="tempoval"> -- </span>
+                </div>
+
+                <div class="card mb-2 w-100" style="width: fit-content;">
+                    <div class="card-body">
+                    <h5 class="card-title mt-0">Leituras</h5>
+                    <p class="card-text mb-0 d-flex align-items-center">
+                        Junta fria: <span class="border rounded text-center mb-0 flex-fill mx-1" id="junta"> -- </span>&deg;C
+                        {% for k in range(8) %}
+                            <div class="form-check mt-1 d-flex">
+                                <input class="form-check-input" type="checkbox" value="" id="check{{k}}" />
+                                <label class="form-check-label" for="check{{k}}">
+                                    Termopar {{(k+1)}}: 
+                                </label>    
+                                <span class="border rounded text-center flex-fill mx-1" id="ValT{{k}}"> -- </span>&deg;C                            
+                            </div>
+                        {% endfor %}
+                    </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="p-2 flex-grow-1 mx-0 my-0 px-0 py-0" id="plot">
+           
+        </div>
+
+        <div class="p-2" style="width: 200px; min-width: 200px;">
+            
+            <div class="card w-100">
+                <div class="card-body">
+                  <h5 class="card-title">Controle</h5>
+                  <p class="card-text mb-0">
+                    <div class="d-flex">
+                        Potência: <span class="border rounded text-center flex-fill mx-1" id="power"> -- </span> %
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="flexRadioDefault" value="off" id="radiooff" checked onchange="changeCtrl()"/>
+                        <label class="form-check-label" for="radiooff" > Off </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="flexRadioDefault" value="manual" id="radiomanual" onchange="changeCtrl()"/>
+                        <label class="form-check-label" for="radiomanual"> Manual: </label> 
+                        <input type="number" id="manuallevel" class="form-control d-inline-block py-0 my-0" value="0" style="width: 50px;" onchange="changeCtrl()"/> %
+                    </div>
+                    
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="radio" name="flexRadioDefault" value="auto" id="radioauto" onchange="changeCtrl()"/>
+                        <label class="form-check-label" for="radioauto"> Auto: </label>
+                        <input type="number" id="setpoint" class="form-control py-0 my-0" value="20.0" style="display: inline-block; width: 50px;" onchange="changeCtrl()"/>&deg;C
+                        <div class="d-flex align-items-center">
+                            <div class="pe-1 h-100">Ref.:</div>
+                            <select class="form-select pt-0 pb-0 mt-1 mb-1" aria-label="Default select example" id="ctrltermop">
+                                {% for k in range(8) %}
+                                    <option value="{{k}}">Termopar {{(k+1)}}</option>
+                                {% endfor %}
+                            </select>                            
+                        </div>                        
+                        <div class="d-flex flex-column w-100">
+                            <div>Kp: <input type="number" id="kp" class="form-control py-0 px-1 ms-1 d-inline-block" value="10.1" style="width: 50px;"/></div> 
+                            <div>Ki: <input type="number" id="ki" class="form-control py-0 px-1 ms-1 d-inline-block" value="1.0" style="width: 50px;"/></div> 
+                            <div>Kd: <input type="number" id="kd" class="form-control py-0 px-1 ms-1 d-inline-block" value="5.0" style="width: 50px;"/></div>                       
+                        </div>
+                    </div>
+                    
+                  </p>
+                  <!-- <button class="btn btn-sm btn-primary w-100 mt-0" id="bgravarctrl" onclick="changeCtrl()">Gravar</button> -->
+                </div>               
+                
+            </div>            
+
+            <div class="card mt-1 w-100" >
+                <div class="card-body">
+                    <h5 class="card-title">Configurações</h5>
+                    <p class="card-text">
+                        <div class="d-flex flex-column w-100">                            
+                            <div class="d-flex align-items-center">
+                                Janela&nbsp;Graf.:
+                                <select class="form-select ms-1 py-0 my-1" id="selectjanela" onchange="changeWindow()">
+                                    {% for k in range(30,3601,30) %}
+                                        <option value="{{k}}">{{k}} s</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex mb-1">
+                                <button class="btn btn-sm btn-primary flex-fill mx-1" onclick="pageleft()"><strong>&xlarr;</strong></button>
+                                <span class="mx-1" id="pagetext">Pg.1</span>
+                                <button class="btn btn-sm btn-primary flex-fill mx-1" onclick="pageright()"><strong>&xrarr;</strong></button>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                Porta:
+                                <select class="form-select ms-1 py-0 my-1" id="selectporta">
+                                    {% for k in range(1,16) %}
+                                        <option value="COM{{k}}">COM{{(k)}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center">                              
+                                Amostragem:
+                                <select class="form-select ms-1 py-0 my-1" id="selectsampling">
+                                    {% for k in range(1,11) %}
+                                        <option value="{{k}}">{{(k)}} s</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div>Tipo&nbsp;Termop.:</div>
+                                <select class="form-select ms-1 py-0 my-1" id="selecttype">
+                                    {% for k in ["B","E","J","K","N","R","S","T"] %}
+                                        <option value="{{k}}" {{ "selected" if loop.last else "" }}>{{(k)}}</option>
+                                    {% endfor %}
+                                </select>  
+                            </div>
+                        </div>  
+                    </p>
+              </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="w-100 border rounded mt-2 p-1" id="statusbar">
+        &NonBreakingSpace;
+    </div>
+    
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+
+        document.flagrunning = false;
+        let intervalID = 0;
+        let hasData = false;
+        let plotwindow = 30;
+        let flagenable = [false,false,false,false,false,false,false,false];
+        let plotmap = [];
+        let plotpage = 0;
+        let tempoatual = -1;
+
+        $(window).on('load', function() {
+            document.plotdiv = document.getElementById('plot');
+            loadUIstate();
+            resetPlot();
+        });
+
+        function loadData() {
+            $.post( "command", { "cmd":"getData", "flagenable": flagenable } )
+                  .done(function( data ) {   
+                    if (data != "NoData") {
+                        console.log(data);
+                        dataloaded = JSON.parse(data.replace(/\bNaN\b/g, "null"));
+                        plotmap = [];
+                        var ct = 0          
+                        for (var i = 0; i < 8; i++) { 
+                            if (flagenable[i]) {  plotmap.push(ct++); }
+                        }
+                        resetPlot();
+                        Plotly.extendTraces(document.plotdiv,{x: dataloaded["x"], y: dataloaded["y"]}, plotmap);
+                        hasData = true;
+                    }                                           
+            });
+        }
+
+        window.onunload = function() {
+            if (document.flagrunning) {
+                startstop();
+            }
+            saveUIstate();
+        }
+
+        function resetPlot() {
+            var layout = {
+                xaxis: {
+                    title: {
+                    text: 'Tempo (s)',
+                    font: {
+                        size: 11,
+                        color: '#7f7f7f'
+                    }
+                    },
+                    fixedrange: true
+                },
+                yaxis: {
+                    title: {
+                    text: 'Temperatura (oC)',
+                    font: {
+                        size: 11,
+                        color: '#7f7f7f'
+                    }
+                    }
+                },
+                margin: { t: 5,r: 5 }
+            }
+            Plotly.newPlot( document.plotdiv, [], layout, {scrollZoom: true, modeBarButtonsToRemove: ['toImage','zoom2d']} );
+            plotcount = 0;
+            for (var i = 0; i < 8; i++) { 
+                if ($("#check" + i).is(":checked")) { 
+                    Plotly.addTraces( document.plotdiv, { x:[0], y: [NaN], line: {simplify: false}, mode: 'lines', name: `T${i+1}` } );
+                    plotcount++;
+                } 
+            }
+            // console.log(plotcount);            
+        }
+
+        function pageright() {
+            if (plotpage > 0) { plotpage--; }
+            $("#pagetext").html(`Pg.${plotpage+1}`)
+        }
+
+        function pageleft() {
+            if (tempoatual < 0) { return; }
+            var limf = tempoatual - plotwindow*(plotpage+1);
+            if (limf > 0) { plotpage++; }
+            $("#pagetext").html(`Pg.${plotpage+1}`)
+        }
+
+        function startstop() {
+            plotmap = [];
+            var ct = 0          
+            for (var i = 0; i < 8; i++) { 
+                flagenable[i] = $("#check" + i).is(":checked"); 
+                if (flagenable[i]) {
+                    plotmap.push(ct++);
+                }
+            }
+            dict = { "flagenable":flagenable,
+                     "port":$("#selectporta option:selected").val(),
+                     "termoptype": $("#selecttype option:selected").val(),
+                     "kp": $("#kp").val(),
+                     "ki": $("#ki").val(),
+                     "kd": $("#ki").val(),
+                     "ctrltermop": $("#ctrltermop option:selected").val(),
+                     "mode": $('input[type=radio]:checked').val(),
+                     "setpoint": $('#setpoint').val(),
+                     "manuallevel": $('#manuallevel').val() }
+            $.post( "startstop", dict )
+              .done(function( data ) {
+                saveUIstate();
+                if (intervalID == 0) {                    
+                    intervalID = setInterval(getStatus, 1000);
+                    $("#statusbar").html("Iniciando...");  
+                    if (!hasData) { resetPlot(); }
+                } 
+              });
+        }
+
+        function changeWindow() {
+            plotwindow = parseFloat($("#selectjanela option:selected").val());
+            console.log(plotwindow);
+        }
+
+        function changeCtrl() {
+            cmode = $('input[type=radio]:checked').val();
+            setpoint = $('#setpoint').val();
+            manuallevel = $('#manuallevel').val();
+            $.post( "command", { "cmd":"changeCtrl", "mode":cmode, "setpoint":setpoint, "manuallevel":manuallevel } )
+              .done(function( data ) {
+                  console.log("Control changed to: " + cmode + setpoint + manuallevel);
+              });
+        }
+
+        function saveData() {
+            if (hasData) {
+                window.open("/savefile", '_blank');
+                // hasData = false;
+                $(window).unbind('beforeunload');
+            } else {
+                $("#statusbar").html("Nada a salvar.");
+            }
+           
+        }
+
+        function saveUIstate() {
+            savedict = {}
+            for (var i = 0; i < 8; i++) { flagenable[i] = $("#check" + i).is(":checked"); }
+            savedict["flagenable"] = flagenable;
+            savedict["ctrlstate"] = $('input[type=radio]:checked').val();
+            savedict["manuallevel"] = $('#manuallevel').val();
+            savedict["setpoint"] = $('#setpoint').val();
+            savedict["ctrltermop"] = $("#ctrltermop option:selected").val();
+            savedict["plotwindow"] = $("#selectjanela option:selected").val();
+            savedict["port"] = $("#selectporta option:selected").val();
+            savedict["sampling"] = $("#selectsampling option:selected").val();
+            savedict["termoptype"] = $("#selecttype option:selected").val();
+            savedict["kp"] = $('#kp').val();
+            savedict["ki"] = $('#ki').val();
+            savedict["kd"] = $('#kd').val();
+            $.post( "command", { "cmd":"saveUIstate", "data":JSON.stringify(savedict) } )
+              .done(function( data ) {
+                  console.log("UI state saved.");
+              });
+        }
+
+        function loadUIstate() {
+            $.post( "command", { "cmd":"getUIstate" } )
+                  .done(function( data ) {                  
+                    loaddict = JSON.parse(data);
+                    for (var i = 0; i < 8; i++) { 
+                        flagenable[i] = loaddict["flagenable"][i];
+                        $("#check" + i).prop('checked', flagenable[i]);
+                    }
+                    $("#radio" + loaddict["ctrlstate"]).prop('checked', true)
+                    $('#manuallevel').val(loaddict["manuallevel"]);
+                    $('#setpoint').val(loaddict["setpoint"]);
+                    $("#ctrltermop").val(loaddict["ctrltermop"]);
+                    $("#selectporta").val(loaddict["port"]);
+                    $("#selectsampling").val(loaddict["sampling"] );
+                    $("#selecttype").val(loaddict["termoptype"]);
+                    $('#kp').val(loaddict["kp"] );
+                    $('#ki').val(loaddict["ki"] );
+                    $('#kd').val(loaddict["kd"] );   
+                    $("#selectjanela").val(loaddict["plotwindow"]); 
+                    plotwindow = parseFloat(loaddict["plotwindow"]);  
+                    loadData();                   
+            });
+            
+        }
+        
+        function cleanup() {
+            if (!document.flagrunning & hasData) {
+                resp = confirm("Deseja mesmo apagar todos os dados?");
+                if (resp) {
+                    $("#statusbar").html(" ")
+                    $.post( "cleardata", { } )
+                    .done(function( data ) {
+                        $("#statusbar").html(data);
+                        clearValues();
+                        hasData = false;
+                        for (var k = 0; k < 8; k++) {
+                            $(`#check${k}`).prop('disabled', false);
+                        }
+                        resetPlot();
+                        $(window).unbind('beforeunload');
+                    });
+                }                
+                // self.ui.comboAmostragem.setEnabled(True)
+            } else {
+                $("#statusbar").html("Sem dados para limpar.");
+            }          
+        } 
+
+        function stoppedRunning() {            
+            $("#blimpar").prop('disabled', false);
+            $("#binit").addClass('btn-primary');
+            $("#binit").removeClass('btn-danger');
+            $("#binit").html("Iniciar Leituras");
+            // for (var k = 0; k < 8; k++) {
+            //     $(`#check${k}`).prop('disabled', false);
+            // }
+            $("#selectporta").prop('disabled', false);
+            $("#selectsampling").prop('disabled', false);
+            $("#selecttype").prop('disabled', false);
+            $("#kp").prop('disabled', false);
+            $("#ki").prop('disabled', false);
+            $("#kd").prop('disabled', false);
+            $("#bsalvar").prop('disabled', false);
+        }
+
+        function startedRunning() {
+            $(window).bind('beforeunload',function() {
+                return "'Are you sure you want to leave the page. All data will be lost!";
+            });
+            $("#statusbar").html("&NonBreakingSpace;");
+            $("#blimpar").prop('disabled', true);
+            $("#binit").addClass('btn-danger');
+            $("#binit").removeClass('btn-primary');                                
+            $("#binit").html("Parar Leituras");
+            for (var k = 0; k < 8; k++) {
+                $(`#check${k}`).prop('disabled', true);
+            }
+            $("#selectporta").prop('disabled', true);
+            $("#selectsampling").prop('disabled', true);
+            $("#selecttype").prop('disabled', true);
+            $("#kp").prop('disabled', true);
+            $("#ki").prop('disabled', true);
+            $("#kd").prop('disabled', true);
+            $("#bsalvar").prop('disabled', true);
+        }
+
+        function clearValues() {
+            for (var i = 0; i < 8; i++) { $("#ValT" + i).html("--"); }
+            $("#tempoval").html("--"); 
+            $("#junta").html("--");
+            $("#power").html("--");  
+        }
+
+        function getStatus() {
+            // if (document.flagrunning) {
+                $.post( "status", { } )
+                  .done(function( data ) {
+
+                        if (data["status"] == "error") {
+                            $("#statusbar").html(data["emessage"]);
+                        }
+
+                        if (document.flagrunning) {
+                            if (data["state"] == "stopped") {
+                                clearInterval(intervalID);                            
+                                intervalID = 0;
+                                document.flagrunning = false;                                
+                                stoppedRunning();
+                            } 
+                        } else {
+                            if (data["state"] == "running") {
+                                document.flagrunning = true; 
+                                tempoatual = (data["data"]["readtime"]); 
+                                plotdata = [];
+                                plotx = [];   
+                                for (var i = 0; i < 8; i++) { 
+                                    if (flagenable[i]) {
+                                        plotdata.push([NaN]);
+                                        plotx.push([tempoatual]);
+                                    }
+                                }
+                                Plotly.extendTraces(document.plotdiv,{x: plotx, y: plotdata}, plotmap);           
+                                startedRunning();
+                            }
+                        }
+
+                        if (document.flagrunning) {
+                            if (data["status"] == "valid") {
+                                hasData = true;
+                                plotdata = [];
+                                plotx = [];
+                                tempoatual = (data["data"]["readtime"]);                                
+                                $("#tempoval").html(tempoatual + " s");
+                                for (var key in data["data"]) {
+                                    if (key.startsWith("termop")) {
+                                        idtermop = "#ValT" + key.substring(6);
+                                        $(idtermop).html(data["data"][key]);
+                                        if (isNaN(data["data"][key])) {
+                                            plotdata.push([NaN]);
+                                            plotx.push([tempoatual]);
+                                        } else {
+                                            plotdata.push([data["data"][key]]);
+                                            plotx.push([tempoatual]);
+                                        }                                        
+                                    } else if (key == "junta") {
+                                        $("#junta").html(data["data"][key]);
+                                    } else if (key == "power") {
+                                        $("#power").html(data["data"][key]);
+                                    }
+                                }
+                                limf = tempoatual - plotwindow*plotpage;
+                                limi = limf - plotwindow;
+                                var update = {'xaxis.range': [limi, limf]};
+                                Plotly.update(document.plotdiv, {}, update);
+                                Plotly.extendTraces(document.plotdiv,{x: plotx, y: plotdata},plotmap);
+                            } else {
+                                clearValues();
+                            }
+                        }                      
+                           
+                });
+            // }            
+           
+        }
+        
+    </script>
+{% endblock %}  

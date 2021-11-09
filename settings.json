@@ -1,0 +1,9 @@
+{
+    "ACTIVESTORAGEPATH": "artigos_sbrt/storage",
+    "STORAGEPATH": "bibliotecaV2/storage",
+    "MAINPATH": "bibliotecaV2",
+    "THUMBPATH": "thumbtmp",
+    "URLPREFIX": "",
+    "UPLOAD_FOLDER": "upload",
+    "MAX_CONTENT_LENGTH": 180000000
+}
