@@ -219,6 +219,22 @@ class driverhardware():
         return val,juntafria,text
 
 
+    def leADC(self,idx):
+        if self.dummymode:
+            time.sleep(0.15)
+            val = 10.0
+            text = "10"
+        else:
+            cmd = f'a{idx}'.encode() # Comando para leitura: uma string com r seguido do número (como string)
+            self.serial.write(cmd)
+            time.sleep(0.05)
+            # QThread.msleep(150)
+            resp = self.serial.read(2)  # Resposta sempre em 5 bytes: os 3 primeiros correspondem à leitura, os outros 2 à junta fria.
+            val = float(int.from_bytes(resp[0:2],byteorder='big',signed=False))                       
+            text = f"{val:.0f}"
+        return val,text
+
+
     def sampletimeout(self):
         # if (self.flagrunning):
         #     self.flagsampletimeout = True
@@ -345,10 +361,16 @@ class driverhardware():
                             self.dman.appendTData(k,rtimeaux,val) 
                         else:
                             self.dman.appendEmptyData(k,readtime)
+                    for k in range(2):  
+                        if self.enablemap[k+8]:    
+                            val,text = self.leADC(k)                  
+                            mydict[f"adc{k}"] = text
                     self.dman.incrementCtReadings()  
                     # print(time.time() - axx)             
                     # self.mwindow.setJunta(f"{junta:.2f}  °C")
                     mydict["junta"] = f"{junta:.2f}"
+
+
 
                     # TODO: Readings if auxiliary inputs:
                     # for k in range(8,10):

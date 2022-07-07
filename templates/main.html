@@ -35,6 +35,15 @@
                                 <span class="border rounded text-center flex-fill mx-1" id="ValT{{k}}"> -- </span>&deg;C                            
                             </div>
                         {% endfor %}
+                        {% for k in range(2) %}
+                            <div class="form-check mt-1 d-flex">
+                                <input class="form-check-input" type="checkbox" value="" id="checkadc{{k}}" />
+                                <label class="form-check-label" for="checkadc{{k}}">
+                                    ADC {{(k+1)}}: 
+                                </label>    
+                                <span class="border rounded text-center flex-fill mx-1" id="Valadc{{k}}"> -- </span>                            
+                            </div>
+                        {% endfor %}
                     </p>
                     </div>
                 </div>
@@ -158,6 +167,7 @@
         let hasData = false;
         let plotwindow = 30;
         let flagenable = [false,false,false,false,false,false,false,false];
+        let flagadcenable = [false,false];
         let plotmap = [];
         let plotpage = 0;
         let tempoatual = -1;
@@ -169,7 +179,7 @@
         });
 
         function loadData() {
-            $.post( "command", { "cmd":"getData", "flagenable": flagenable } )
+            $.post( "command", { "cmd":"getData", "flagenable": flagenable, "flagadcenable" : flagadcenable } )
                   .done(function( data ) {   
                     if (data != "NoData") {
                         console.log(data);
@@ -214,13 +224,26 @@
                     }
                     }
                 },
-                margin: { t: 5,r: 5 }
+                yaxis2: {
+                    title: 'ADC',
+                    // titlefont: {color: 'rgb(148, 103, 189)'},
+                    // tickfont: {color: 'rgb(148, 103, 189)'},
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                // margin: { t: 5,r: 5 }
             }
             Plotly.newPlot( document.plotdiv, [], layout, {scrollZoom: true, modeBarButtonsToRemove: ['toImage','zoom2d']} );
             plotcount = 0;
             for (var i = 0; i < 8; i++) { 
                 if ($("#check" + i).is(":checked")) { 
                     Plotly.addTraces( document.plotdiv, { x:[0], y: [NaN], line: {simplify: false}, mode: 'lines', name: `T${i+1}` } );
+                    plotcount++;
+                } 
+            }
+            for (var i = 0; i < 2; i++) { 
+                if ($("#checkadc" + i).is(":checked")) { 
+                    Plotly.addTraces( document.plotdiv, { x:[0], y: [NaN], line: {simplify: false}, mode: 'lines', name: `ADC${i+1}`, yaxis: 'y2' } );
                     plotcount++;
                 } 
             }
@@ -248,7 +271,11 @@
                     plotmap.push(ct++);
                 }
             }
+            for (var i = 0; i < 2; i++) {
+                flagadcenable[i] = $("#checkadc" + i).is(":checked"); 
+            }
             dict = { "flagenable":flagenable,
+                     "flagadcenable":flagadcenable,
                      "port":$("#selectporta option:selected").val(),
                      "termoptype": $("#selecttype option:selected").val(),
                      "kp": $("#kp").val(),
@@ -299,6 +326,8 @@
             savedict = {}
             for (var i = 0; i < 8; i++) { flagenable[i] = $("#check" + i).is(":checked"); }
             savedict["flagenable"] = flagenable;
+            for (var i = 0; i < 2; i++) { flagadcenable[i] = $("#checkadc" + i).is(":checked"); }
+            savedict["flagadcenable"] = flagadcenable;
             savedict["ctrlstate"] = $('input[type=radio]:checked').val();
             savedict["manuallevel"] = $('#manuallevel').val();
             savedict["setpoint"] = $('#setpoint').val();
@@ -323,6 +352,10 @@
                     for (var i = 0; i < 8; i++) { 
                         flagenable[i] = loaddict["flagenable"][i];
                         $("#check" + i).prop('checked', flagenable[i]);
+                    }
+                    for (var i = 0; i < 2; i++) { 
+                        flagadcenable[i] = loaddict["flagadcenable"][i];
+                        $("#checkadc" + i).prop('checked', flagadcenable[i]);
                     }
                     $("#radio" + loaddict["ctrlstate"]).prop('checked', true)
                     $('#manuallevel').val(loaddict["manuallevel"]);
@@ -353,6 +386,9 @@
                         hasData = false;
                         for (var k = 0; k < 8; k++) {
                             $(`#check${k}`).prop('disabled', false);
+                        }
+                        for (var k = 0; k < 2; k++) {
+                            $(`#checkadc${k}`).prop('disabled', false);
                         }
                         resetPlot();
                         $(window).unbind('beforeunload');
@@ -393,6 +429,9 @@
             for (var k = 0; k < 8; k++) {
                 $(`#check${k}`).prop('disabled', true);
             }
+            for (var k = 0; k < 2; k++) {
+                $(`#checkadc${k}`).prop('disabled', true);
+            }
             $("#selectporta").prop('disabled', true);
             $("#selectsampling").prop('disabled', true);
             $("#selecttype").prop('disabled', true);
@@ -404,6 +443,7 @@
 
         function clearValues() {
             for (var i = 0; i < 8; i++) { $("#ValT" + i).html("--"); }
+            for (var i = 0; i < 2; i++) { $("#Valadc" + i).html("--"); }
             $("#tempoval").html("--"); 
             $("#junta").html("--");
             $("#power").html("--");  
@@ -464,6 +504,15 @@
                                         $("#junta").html(data["data"][key]);
                                     } else if (key == "power") {
                                         $("#power").html(data["data"][key]);
+                                    } else if (key.startsWith("adc")) {
+                                        $("#Val"+key).html(data["data"][key]);
+                                        // if (isNaN(data["data"][key])) {
+                                        //     plotdata.push([NaN]);
+                                        //     plotx.push([tempoatual]);
+                                        // } else {
+                                        //     plotdata.push([data["data"][key]]);
+                                        //     plotx.push([tempoatual]);
+                                        // }
                                     }
                                 }
                                 limf = tempoatual - plotwindow*plotpage;

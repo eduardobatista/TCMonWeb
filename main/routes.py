@@ -14,7 +14,7 @@ def startstop():
         current_app.driver.paraLeituras()
         return "Parando leituras."
     else: 
-        fenable = request.values.getlist("flagenable[]") + ["false","false"]
+        fenable = request.values.getlist("flagenable[]") + request.values.getlist("flagadcenable[]")
         port = request.values["port"]
         termoptype = request.values["termoptype"]
         for k in range(10):
