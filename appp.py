@@ -7,7 +7,9 @@ from main.driverhardware import driverhardware
 
 def create_app(debug=False):
 
-    with open('settings.json') as f:
+    filedir= Path(os.path.realpath(__file__)).parent
+    # print(filedir)
+    with open(filedir / 'settings.json') as f:
         config = json.load(f)
 
     """Create an application."""
